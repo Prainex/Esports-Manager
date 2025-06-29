@@ -23,11 +23,32 @@ async def goodboy(ctx):
     await ctx.send("I'm a Goodboy, bark bark")
 
 @client.tree.command(name="assign_task", description="Assign a task to a user")
-async def create_task(interaction: discord.Interaction, task: str, deadline: str, assignee: str, description: str):
+async def create_task(
+    interaction: discord.Interaction,
+    task: str,
+    deadline: str,
+    assignee: discord.User,
+    description: str
+):
     await interaction.response.send_message(f'Creating task: {task}')
-    await client.get_channel(BOT_LOG).send(f'Assigned {assignee} to complete task: {task}. They are expected to finish by {deadline}. Description: {description}')
-    await client.get_channel(TASK_CHANNEL).send(f'Assigned {assignee} to complete task: {task}. They are expected to finish by {deadline}. Description: {description}')
-    # await client.get_user(assignee).send(f'You have been assigned to complete task: {task}. You are expected to finish by {deadline}. Description: {description}')
+
+    log_message = (
+        f'Assigned {assignee.mention} to complete task: **{task}**.\n'
+        f'Deadline: **{deadline}**\nDescription: {description}'
+    )
+
+    await client.get_channel(BOT_LOG).send(log_message)
+    await client.get_channel(TASK_CHANNEL).send(log_message)
+
+    try:
+        await assignee.send(
+            f"You have been assigned a task:\n"
+            f"**Task**: {task}\n**Deadline**: {deadline}\n**Description**: {description}"
+        )
+    except discord.Forbidden:
+        await interaction.followup.send(
+            f"⚠️ Could not DM {assignee.mention}. They may have DMs disabled.", ephemeral=True
+        )
 
 
 @client.tree.command(name="report_bug", description="report a bug")
@@ -49,3 +70,5 @@ async def on_member_join(member):
     await member.send(f'Welcome to the server {member.mention}!')
 
 client.run(TOKEN, log_handler=handler, log_level=logging.DEBUG)
+
+#hello
