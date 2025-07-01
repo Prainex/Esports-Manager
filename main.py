@@ -9,24 +9,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-OWNER = int(os.getenv('BUGS_ID'))
 TOKEN = os.getenv('DISCORD_TOKEN')
-TASK_CHANNEL= int(os.getenv('TASKS_ID'))
+BUGS_CHANNEL = int(os.getenv('BUGS_ID'))
 BOT_LOG = int(os.getenv('LOG_CHANNEL'))
+TASK_CHANNEL= int(os.getenv('TASKS_ID'))
 EVENTS_CHANNEL = int(os.getenv('EVENTS_ID'))
 
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 
 client = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
-@client.command()
-async def goodboy(ctx):
-    await ctx.send("I'm a Goodboy, bark bark")
-
 
 #Create events command
-@client.tree.command(name="post_event", description="Create an upcoming event")
-async def post_event(
+@client.tree.command(name="add_event", description="Add an upcoming event")
+async def add_event(
     interaction: discord.Interaction, 
     name: str, 
     date: str,
@@ -48,13 +44,13 @@ async def assign_task(
     interaction: discord.Interaction,
     task: str,
     deadline: str,
-    assignee: discord.User,
+    user: discord.User,
     description: str
 ):
     await interaction.response.send_message(f'Creating task: {task}')
 
     log_message = (
-        f'Assigned {assignee.mention} to complete task: **{task}**.\n'
+        f'Assigned {user.mention} to complete task: **{task}**.\n'
         f'Deadline: **{deadline}**\nDescription: {description}'
     )
 
@@ -62,14 +58,15 @@ async def assign_task(
     await client.get_channel(TASK_CHANNEL).send(log_message)
 
     try:
-        await assignee.send(
+        await user.send(
             f"You have been assigned a task:\n"
             f"**Task**: {task}\n**Deadline**: {deadline}\n**Description**: {description}"
         )
     except discord.Forbidden:
         await interaction.followup.send(
-            f"⚠️ Could not DM {assignee.mention}. They may have DMs disabled.", ephemeral=True
+            f"⚠️ Could not DM {user.mention}. They may have DMs disabled.", ephemeral=True
         )
+
 
 #Report bugs command
 @client.tree.command(name="report_bug", description="Report a bug in the bot")
@@ -83,7 +80,17 @@ async def report_bug(
         f"Bug reported: {command} \n" 
         f"Description: {description}"
     )
-    await client.get_channel(OWNER).send(log_message)
+    await client.get_channel(BUGS_CHANNEL).send(log_message)
+
+
+# List available commands
+@client.command()
+async def commands(ctx):
+    commands_list = [f"/{cmd.name} - {cmd.description}" for cmd in client.tree.get_commands()]
+    if commands_list:
+        await ctx.send(f"```Here are the available commands:\n" + "\n".join(commands_list) + "\n```")
+    else:
+        await ctx.send("No commands available at the moment.")
 
 
 @client.event
